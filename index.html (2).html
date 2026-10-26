@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecuaciones con la balanza</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F7FB; --card:#FFFFFF; --texto:#1F2A44; --suave:#5B6478; --borde:#D9E0EA;
+  --x:#F28C28; --x-osc:#A85600; --cubo:#2F80ED; --cubo-osc:#1A5BB5;
+  --ok:#1E8E50; --ok-bg:#E6F6ED; --err:#C9302C; --err-bg:#FDECEC;
+  --info-bg:#EAF2FD; --alerta:#B86A00; --alerta-bg:#FFF4E5;
+  --g1:#8E44AD; --g2:#138D75; --g3:#C0392B;
+  --radio:18px; --sombra:0 4px 14px rgba(31,42,68,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Atkinson Hyperlegible",Verdana,Arial,sans-serif;background:var(--bg);color:var(--texto);font-size:19px;line-height:1.45}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none}
+button:focus-visible{outline:4px solid #FFB020;outline-offset:3px}
+
+/* ---------- Encabezado ---------- */
+header{background:var(--card);border-bottom:2px solid var(--borde);padding:14px 16px;position:sticky;top:0;z-index:20}
+.top{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+h1{font-size:1.25rem;margin:0;display:flex;align-items:center;gap:8px}
+nav{display:flex;gap:8px}
+.tab{background:var(--bg);color:var(--texto);padding:10px 16px;border-radius:999px;font-weight:700;border:2px solid var(--borde)}
+.tab[aria-selected="true"]{background:var(--texto);color:#fff;border-color:var(--texto)}
+
+main{max-width:900px;margin:0 auto;padding:16px}
+.vista{display:none}
+.vista.activa{display:block}
+
+.card{background:var(--card);border-radius:var(--radio);box-shadow:var(--sombra);padding:18px;margin-bottom:16px;border:2px solid var(--borde)}
+.card h2{margin:0 0 6px;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+.num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--texto);color:#fff;font-size:1rem;flex-shrink:0}
+.card p{margin:6px 0}
+
+.btn{padding:14px 22px;border-radius:14px;font-weight:700;transition:transform .1s,filter .15s,box-shadow .15s;box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-principal{background:var(--ok);color:#fff}
+.btn-azul{background:var(--cubo);color:#fff}
+.btn-sec{background:var(--bg);color:var(--texto);border:2px solid var(--borde)}
+.btn-grande{width:100%;font-size:1.15rem;padding:16px}
+.btn-audio{background:var(--info-bg);color:var(--cubo-osc);border:2px solid #BCD4F6;padding:6px 12px;border-radius:999px;font-size:.9rem;font-weight:700;flex-shrink:0}
+
+/* ---------- Símbolos de colores ---------- */
+.vx{color:var(--x-osc);font-weight:700}
+.vn{color:var(--cubo-osc);font-weight:700}
+.leyenda{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px}
+.leyenda span{display:flex;align-items:center;gap:8px;font-size:.95rem}
+
+/* ---------- Ítems de la balanza ---------- */
+.caja,.cubo{display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;user-select:none}
+.caja{width:50px;height:50px;border-radius:10px;background:var(--x);border:3px solid var(--x-osc);font-size:1.4rem;font-style:italic}
+.caja.abierta{background:#fff;color:var(--x-osc);font-style:normal}
+.cubo{width:40px;height:40px;border-radius:8px;background:var(--cubo);border:3px solid var(--cubo-osc);font-size:.95rem;padding:0}
+button.cubo{transition:transform .12s, opacity .2s}
+button.cubo.tocable:hover{transform:scale(1.1)}
+button.cubo:not(.tocable){cursor:default}
+.mini .caja{width:30px;height:30px;font-size:.95rem;border-width:2px;border-radius:6px}
+.mini .cubo{width:24px;height:24px;font-size:.7rem;border-width:2px;border-radius:5px}
+
+/* ---------- Balanza ---------- */
+.balanza{position:relative;padding:4px 0 0}
+.platos{display:grid;grid-template-columns:1fr 54px 1fr;align-items:end;gap:6px}
+.lado{transition:transform .5s cubic-bezier(.3,1.4,.5,1);display:flex;flex-direction:column;align-items:center}
+.items{min-height:120px;width:100%;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:flex-end;padding:6px;border-radius:12px}
+.mini .items{min-height:60px;gap:4px;padding:4px}
+.plato{width:96%;height:12px;background:#9AA5B8;border-radius:0 0 40px 40px}
+.etiq{font-size:.8rem;color:var(--suave);margin-top:4px}
+.signo{align-self:center;display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;font-size:1.8rem;font-weight:700;transition:background .3s,color .3s}
+.signo.igual{background:var(--ok-bg);color:var(--ok);border:3px solid var(--ok)}
+.signo.distinto{background:var(--err-bg);color:var(--err);border:3px solid var(--err)}
+.mini .signo{width:34px;height:34px;font-size:1.2rem;border-width:2px}
+.viga{height:10px;background:#5B6478;border-radius:6px;margin:8px 4% 0;transition:transform .5s cubic-bezier(.3,1.4,.5,1)}
+.poste{width:14px;height:44px;background:#5B6478;margin:0 auto}
+.base{width:120px;height:12px;background:#5B6478;border-radius:8px 8px 0 0;margin:0 auto}
+.mini .poste{height:22px;width:10px}
+.mini .base{width:70px;height:8px}
+.mini .viga{height:7px}
+
+.grupo{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-radius:10px;border:3px dashed;justify-content:center}
+
+/* ---------- Ecuación ---------- */
+.ecuacion{font-size:2rem;font-weight:700;text-align:center;letter-spacing:1px;padding:8px;background:var(--bg);border-radius:14px;margin:6px 0 12px}
+.ecuacion small{display:block;font-size:.85rem;color:var(--suave);font-weight:400;letter-spacing:0}
+
+/* ---------- Pasos ---------- */
+.pasos{display:flex;gap:6px;margin:0 0 12px;padding:0;list-style:none;flex-wrap:wrap}
+.pasos li{flex:1;min-width:110px;text-align:center;padding:8px 6px;border-radius:12px;background:var(--bg);color:var(--suave);font-weight:700;font-size:.9rem;border:2px solid var(--borde)}
+.pasos li.actual{background:#FFF7D6;color:var(--texto);border-color:#F2C200}
+.pasos li.hecho{background:var(--ok-bg);color:var(--ok);border-color:#9ED6B6}
+
+/* ---------- Mensaje ---------- */
+.mensaje{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;margin:12px 0;font-size:1.05rem;border:2px solid}
+.mensaje .ico{font-size:1.6rem;line-height:1}
+.mensaje .txt{flex:1}
+.mensaje.info{background:var(--info-bg);border-color:#BCD4F6}
+.mensaje.ok{background:var(--ok-bg);border-color:#9ED6B6}
+.mensaje.alerta{background:var(--alerta-bg);border-color:#F5C77E}
+.mensaje.error{background:var(--err-bg);border-color:#F1A7A5}
+
+/* ---------- Niveles ---------- */
+.niveles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.nivel{background:var(--card);border:2px solid var(--borde);border-radius:14px;padding:10px;text-align:left;color:var(--texto)}
+.nivel b{display:block}
+.nivel .d{font-size:.85rem;color:var(--suave)}
+.nivel .est{font-size:.95rem;margin-top:2px}
+.nivel.sel{border-color:var(--texto);box-shadow:0 0 0 2px var(--texto)}
+.nivel:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---------- Teclado ---------- */
+.respuesta{display:flex;align-items:center;justify-content:center;gap:12px;font-size:1.8rem;font-weight:700;margin:6px 0 12px}
+.visor{min-width:80px;height:64px;border:3px solid var(--x-osc);border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fff}
+.visor.vacio{color:#B9C0CC}
+.teclado{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.tecla{background:#fff;border:2px solid var(--borde);border-radius:12px;padding:14px 0;font-size:1.3rem;font-weight:700;color:var(--texto);transition:transform .1s}
+.tecla:hover{border-color:var(--cubo)}
+.tecla:active{transform:scale(.95)}
+.tecla.sel{background:var(--x);color:#fff;border-color:var(--x-osc)}
+.acciones{display:flex;gap:10px}
+.acciones .btn{flex:1}
+
+.comprobacion{background:var(--ok-bg);border:2px solid #9ED6B6;border-radius:14px;padding:14px;font-size:1.25rem;text-align:center;margin-bottom:12px}
+.comprobacion .l{font-size:1.6rem;font-weight:700;margin:4px 0}
+
+/* ---------- Modal ---------- */
+.modal-fondo{position:fixed;inset:0;background:rgba(20,28,45,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal-fondo.abierto{display:flex}
+.modal{background:#fff;border-radius:20px;padding:24px;max-width:420px;width:100%;text-align:center}
+.modal .grande{font-size:3rem}
+.modal h3{margin:6px 0}
+.modal .acciones{flex-direction:column;margin-top:16px}
+
+footer{text-align:center;color:var(--suave);font-size:.85rem;padding:20px 16px 30px}
+footer button{background:none;color:var(--suave);text-decoration:underline;font-size:.85rem}
+
+@keyframes aparecer{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.pop{animation:aparecer .35s ease}
+
+/* ---------- Pantalla de acceso ---------- */
+.acceso{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.acceso.oculto{display:none}
+.acceso-card{background:#fff;border-radius:22px;box-shadow:var(--sombra);border:2px solid var(--borde);padding:24px;max-width:380px;width:100%;text-align:center}
+.acceso-card h2{margin:6px 0 4px;font-size:1.4rem}
+.acceso-card p{margin:4px 0;color:var(--suave)}
+.candado{font-size:3rem}
+.pin{display:flex;justify-content:center;gap:10px;margin:16px 0 8px}
+.pin span{width:52px;height:60px;border:3px solid var(--borde);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--cubo-osc);transition:border-color .2s}
+.pin span.lleno{border-color:var(--cubo)}
+.pin.mal span{border-color:var(--err)}
+.pin.mal{animation:sacudir .4s}
+.pin.bien span{border-color:var(--ok);color:var(--ok)}
+@keyframes sacudir{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+.pin-msg{min-height:30px;font-weight:700;margin-bottom:8px}
+.pin-msg.error{color:var(--err)}
+.pin-msg.ok{color:var(--ok)}
+.pin-teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pin-teclado .tecla{padding:16px 0;font-size:1.5rem}
+.pin-teclado .borrar{font-size:1rem;background:var(--bg)}
+
+/* ---------- Explicación paso a paso ---------- */
+.progreso-diapo{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:.95rem;color:var(--suave);font-weight:700;gap:10px}
+.puntos{display:flex;gap:6px;flex-wrap:wrap}
+.puntos span{width:14px;height:14px;border-radius:50%;background:var(--borde)}
+.puntos span.on{background:var(--texto)}
+.puntos span.visto{background:#9ED6B6}
+.diapo h2{font-size:1.45rem;margin:0 0 10px}
+.clave{display:flex;align-items:center;gap:14px;background:#FFF7D6;border:2px solid #F2C200;border-radius:14px;padding:12px;margin:10px 0 14px}
+.clave .sim{min-width:70px;height:64px;border-radius:12px;background:#fff;border:2px solid #F2C200;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;padding:0 10px;white-space:nowrap}
+.clave .pal{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--suave);font-weight:700}
+.clave b{display:block;font-size:1.2rem}
+.diapo-texto p{font-size:1.15rem;margin:8px 0;display:flex;gap:10px}
+.diapo-texto p::before{content:"•";color:var(--x);font-weight:700}
+.visual{margin:14px 0 6px;padding:10px;background:#FBFCFE;border:2px solid var(--borde);border-radius:14px}
+.visual .pie{text-align:center;font-weight:700;margin:6px 0 0}
+.dos{display:grid;grid-template-columns:1fr;gap:6px;align-items:center}
+.flecha{text-align:center;font-size:1.1rem;font-weight:700;color:var(--suave)}
+.flecha .h{display:none}
+.incog{display:flex;align-items:center;justify-content:center;gap:16px;font-size:2.2rem;font-weight:700;padding:16px}
+.incog .caja{width:90px;height:90px;font-size:2.4rem}
+.incog .preg{width:90px;height:90px;border-radius:50%;border:4px dashed var(--x);display:flex;align-items:center;justify-content:center;color:var(--x-osc)}
+.compr-pasos{text-align:center;font-size:1.5rem;font-weight:700;line-height:2}
+.resumen{list-style:none;padding:0;margin:10px 0;counter-reset:r}
+.resumen li{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--bg);margin-bottom:8px;font-size:1.15rem;border:2px solid var(--borde)}
+.resumen li::before{counter-increment:r;content:counter(r);min-width:38px;height:38px;border-radius:50%;background:var(--texto);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.nav-diapo{display:flex;gap:10px;margin-top:16px}
+.nav-diapo .btn{flex:1}
+
+@media (min-width:640px){
+  .niveles{grid-template-columns:repeat(4,1fr)}
+  .dos{grid-template-columns:1fr auto 1fr}
+  .flecha .v{display:none}
+  .flecha .h{display:inline}
+  .teclado{grid-template-columns:repeat(7,1fr)}
+}
+@media (max-width:380px){
+  body{font-size:17px}
+  .cubo{width:32px;height:32px}
+  .caja{width:42px;height:42px}
+  .ecuacion{font-size:1.6rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ================= ACCESO CON CONTRASEÑA ================= -->
+<div class="acceso" id="acceso" role="dialog" aria-modal="true" aria-labelledby="accesoTitulo">
+  <div class="acceso-card">
+    <div class="candado" id="candado">🔒</div>
+    <h2 id="accesoTitulo">Ecuaciones con la balanza</h2>
+    <p>Escribí la contraseña de 4 números para entrar.</p>
+    <div class="pin" id="pin" aria-live="polite" aria-label="Números escritos">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="pin-msg" id="pinMsg" role="status"></div>
+    <div class="pin-teclado" role="group" aria-label="Teclado de la contraseña">
+      <button class="tecla" data-pin="1">1</button><button class="tecla" data-pin="2">2</button><button class="tecla" data-pin="3">3</button>
+      <button class="tecla" data-pin="4">4</button><button class="tecla" data-pin="5">5</button><button class="tecla" data-pin="6">6</button>
+      <button class="tecla" data-pin="7">7</button><button class="tecla" data-pin="8">8</button><button class="tecla" data-pin="9">9</button>
+      <button class="tecla borrar" id="pinBorrar">⌫ Borrar</button><button class="tecla" data-pin="0">0</button><span></span>
+    </div>
+  </div>
+</div>
+
+<header inert>
+  <div class="top">
+    <h1>⚖️ Ecuaciones con la balanza</h1>
+    <nav role="tablist">
+      <button class="tab" role="tab" id="tab-aprendo" aria-selected="true" data-vista="aprendo">1. Aprendo</button>
+      <button class="tab" role="tab" id="tab-practico" aria-selected="false" data-vista="practico">2. Practico</button>
+    </nav>
+  </div>
+</header>
+
+<main inert>
+  <!-- ================= APRENDO ================= -->
+  <section class="vista activa" id="vista-aprendo" aria-labelledby="tab-aprendo">
+    <article class="card diapo" aria-live="polite">
+      <div class="progreso-diapo">
+        <span id="diapoNum">Paso 1 de 8</span>
+        <div class="puntos" id="diapoPuntos" aria-hidden="true"></div>
+      </div>
+      <div id="diapoContenido"></div>
+      <button class="btn-audio" id="diapoAudio">🔊 Escuchar</button>
+      <div class="nav-diapo">
+        <button class="btn btn-sec" id="diapoAnt">⬅ Anterior</button>
+        <button class="btn btn-principal" id="diapoSig">Siguiente ➜</button>
+      </div>
+    </article>
+  </section>
+
+  <!-- ================= PRACTICO ================= -->
+  <section class="vista" id="vista-practico" aria-labelledby="tab-practico">
+    <div class="niveles" id="niveles"></div>
+
+    <div class="card">
+      <ol class="pasos" id="pasos"></ol>
+
+      <div class="ecuacion" id="ecuacion"></div>
+
+      <div class="balanza" id="balanza">
+        <div class="platos">
+          <div class="lado" id="ladoIzq">
+            <div class="items" id="itemsIzq"></div>
+            <div class="plato"></div>
+            <div class="etiq">Lado izquierdo</div>
+          </div>
+          <div class="signo igual" id="signo" aria-live="polite">=</div>
+          <div class="lado" id="ladoDer">
+            <div class="items" id="itemsDer"></div>
+            <div class="plato"></div>
+            <div class="etiq">Lado derecho</div>
+          </div>
+        </div>
+        <div class="viga" id="viga"></div>
+        <div class="poste"></div>
+        <div class="base"></div>
+      </div>
+
+      <div class="mensaje info" id="mensaje" role="status" aria-live="polite">
+        <span class="ico" id="msgIco">👉</span>
+        <span class="txt" id="msgTxt"></span>
+        <button class="btn-audio" id="msgAudio" aria-label="Escuchar el mensaje">🔊</button>
+      </div>
+
+      <div id="controles"></div>
+    </div>
+  </section>
+</main>
+
+<footer inert>
+  Hecho para aprender paso a paso · <button id="btnReiniciar">Borrar mi progreso</button>
+</footer>
+
+<div class="modal-fondo" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+  <div class="modal">
+    <div class="grande" id="modalIco">🎉</div>
+    <h3 id="modalTitulo"></h3>
+    <p id="modalTxt"></p>
+    <div class="acciones" id="modalAcciones"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================= CONFIGURACIÓN ================= */
+  const POR_NIVEL = 3;
+  const CLAVE = 'ecuBalanza_v1';
+  const COLORES_GRUPO = ['var(--g1)', 'var(--g2)', 'var(--g3)'];
+  const azar = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const NIVELES = [
+    { id: 1, nombre: 'Nivel 1', desc: 'x + número', gen: () => ({ k: 1, a: azar(1, 5), x: azar(1, 6), aPrimero: false }) },
+    { id: 2, nombre: 'Nivel 2', desc: 'número + x', gen: () => ({ k: 1, a: azar(1, 5), x: azar(1, 6), aPrimero: true }) },
+    { id: 3, nombre: 'Nivel 3', desc: 'cajas iguales', gen: () => { const k = azar(2, 3); return { k, a: 0, x: azar(1, k === 2 ? 5 : 4), aPrimero: false }; } },
+    { id: 4, nombre: 'Nivel 4', desc: 'cajas + número', gen: () => ({ k: 2, a: azar(1, 4), x: azar(1, 4), aPrimero: false }) }
+  ];
+
+  /* ================= PERSISTENCIA ================= */
+  const progresoInicial = () => ({ desbloqueado: 1, aciertos: { 1: 0, 2: 0, 3: 0, 4: 0 }, nivelActual: 1 });
+  function cargar() {
+    try {
+      const d = JSON.parse(localStorage.getItem(CLAVE));
+      if (d && d.aciertos && d.desbloqueado) return d;
+    } catch (e) { /* sin almacenamiento */ }
+    return progresoInicial();
+  }
+  function guardar() {
+    try { localStorage.setItem(CLAVE, JSON.stringify(progreso)); } catch (e) { /* ignorar */ }
+  }
+  let progreso = cargar();
+
+  /* ================= ESTADO DEL EJERCICIO ================= */
+  let ej = null;          // {k, a, x, aPrimero}
+  let est = null;         // estado de la balanza
+  let ultimoEj = '';
+
+  function nuevoEjercicio() {
+    const nivel = NIVELES[progreso.nivelActual - 1];
+    let e, firma, intentos = 0;
+    do {
+      e = nivel.gen();
+      firma = `${e.k}-${e.a}-${e.x}`;
+      intentos++;
+    } while (firma === ultimoEj && intentos < 20);
+    ultimoEj = firma;
+    ej = e;
+    est = {
+      izq: { cajas: e.k, cubos: e.a },
+      der: { cubos: e.k * e.x + e.a },
+      pendiente: null,          // 'izq' | 'der' cuando falta sacar del otro lado
+      fase: e.a > 0 ? 'quitar' : (e.k > 1 ? 'repartir' : 'responder'),
+      agrupado: false,
+      valor: null,
+      errores: 0,
+      pista: false
+    };
+    mensajeFase();
+    render();
+  }
+
+  /* ================= TEXTOS ================= */
+  const nombreCajas = k => k === 1 ? 'x' : `${k}x`;
+  function ecuacionTexto(k, a, aPrimero, b) {
+    let izq = nombreCajas(k);
+    if (a > 0) izq = aPrimero ? `${a} + ${izq}` : `${izq} + ${a}`;
+    return `${izq} = ${b}`;
+  }
+  function ecuacionHTML(k, a, aPrimero, b) {
+    const X = `<span class="vx">${nombreCajas(k)}</span>`;
+    const A = `<span class="vn">${a}</span>`;
+    let izq = X;
+    if (a > 0) izq = aPrimero ? `${A} + ${X}` : `${X} + ${A}`;
+    return `${izq} = <span class="vn">${b}</span>`;
+  }
+
+  let msgActual = '';
+  function mensaje(tipo, texto) {
+    const icos = { info: '👉', ok: '✅', alerta: '⚠️', error: '🤔' };
+    const box = document.getElementById('mensaje');
+    box.className = `mensaje ${tipo}`;
+    document.getElementById('msgIco').textContent = icos[tipo] || '👉';
+    document.getElementById('msgTxt').innerHTML = texto;
+    msgActual = texto.replace(/<[^>]+>/g, '');
+  }
+
+  function mensajeFase() {
+    const { fase } = est;
+    if (fase === 'quitar') {
+      mensaje('info', 'Tocá un <b>cubo azul</b> para sacarlo. Tenemos que dejar la <span class="vx">caja</span> sola.');
+    } else if (fase === 'repartir') {
+      mensaje('info', `Hay <b>${ej.k} cajas iguales</b>. Tocá <b>«Repartir»</b> para armar ${ej.k} grupos iguales de cubos.`);
+    } else if (fase === 'responder') {
+      if (ej.k === 1) mensaje('info', '¡La caja quedó sola! ¿Cuántos cubos hay del <b>otro lado</b>? Ese número es <span class="vx">x</span>.');
+      else mensaje('info', 'Cada caja equilibra con <b>un grupo</b>. ¿Cuántos cubos tiene <b>cada grupo</b>? Ese número es <span class="vx">x</span>.');
+    }
+  }
+
+  /* ================= VOZ ================= */
+  function hablar(texto) {
+    if (!('speechSynthesis' in window)) {
+      mensaje('alerta', 'Este navegador no puede leer en voz alta.');
+      return;
+    }
+    const limpio = texto
+      .replace(/(\d)x/g, '$1 equis')
+      .replace(/\bx\b/g, 'equis')
+      .replace(/=/g, ' es igual a ')
+      .replace(/\+/g, ' más ')
+      .replace(/−/g, ' menos ')
+      .replace(/·/g, ' por ');
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(limpio);
+    u.lang = 'es-AR';
+    u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  }
+
+  /* ================= DIBUJO DE ÍTEMS ================= */
+  const cajaHTML = (abierta, valor, color) =>
+    `<span class="caja ${abierta ? 'abierta pop' : ''}" ${color ? `style="border-color:${color};border-width:4px"` : ''} aria-label="${abierta ? 'caja con ' + valor : 'caja x'}">${abierta ? valor : 'x'}</span>`;
+
+  const cuboHTML = (lado, tocable, etiqueta = '1') =>
+    `<button class="cubo ${tocable ? 'tocable' : ''}" data-lado="${lado}" aria-label="cubo azul del lado ${lado === 'izq' ? 'izquierdo' : 'derecho'}" ${tocable ? '' : 'tabindex="-1"'}>${etiqueta}</button>`;
+
+  function render() {
+    // Ecuación actual
+    const b = est.der.cubos;
+    let ecu = ecuacionHTML(est.izq.cajas, est.izq.cubos, ej.aPrimero, b);
+    if (est.pendiente) ecu = '<span style="color:var(--err)">¡Balanza desequilibrada!</span>';
+    document.getElementById('ecuacion').innerHTML =
+      `${ecu}<small>Ecuación del ejercicio: ${ecuacionTexto(ej.k, ej.a, ej.aPrimero, ej.k * ej.x + ej.a)}</small>`;
+
+    const tocable = est.fase === 'quitar';
+    const abierta = est.fase === 'comprobar';
+
+    // Lado izquierdo
+    let izq = '';
+    const cajas = Array.from({ length: est.izq.cajas }, (_, i) =>
+      cajaHTML(abierta, ej.x, est.agrupado ? COLORES_GRUPO[i] : null)).join('');
+    const cubosIzq = Array.from({ length: est.izq.cubos }, () => cuboHTML('izq', tocable)).join('');
+    izq = ej.aPrimero ? cubosIzq + cajas : cajas + cubosIzq;
+    document.getElementById('itemsIzq').innerHTML = izq;
+
+    // Lado derecho
+    let der = '';
+    if (est.agrupado) {
+      for (let g = 0; g < ej.k; g++) {
+        const cubos = Array.from({ length: ej.x }, (_, i) =>
+          cuboHTML('der', false, est.pista && g === 0 ? i + 1 : '1')).join('');
+        der += `<div class="grupo pop" style="border-color:${COLORES_GRUPO[g]}">${cubos}</div>`;
+      }
+    } else {
+      der = Array.from({ length: est.der.cubos }, (_, i) =>
+        cuboHTML('der', tocable, est.pista ? i + 1 : '1')).join('');
+    }
+    document.getElementById('itemsDer').innerHTML = der;
+
+    // Inclinación
+    const pesoIzq = est.izq.cajas * ej.x + est.izq.cubos;
+    const dif = pesoIzq - est.der.cubos; // >0 izquierda más pesada
+    const ang = Math.max(-12, Math.min(12, dif * 7));
+    document.getElementById('viga').style.transform = `rotate(${-ang}deg)`;
+    document.getElementById('ladoIzq').style.transform = `translateY(${ang * 1.8}px)`;
+    document.getElementById('ladoDer').style.transform = `translateY(${-ang * 1.8}px)`;
+    const signo = document.getElementById('signo');
+    signo.textContent = dif === 0 ? '=' : '≠';
+    signo.className = `signo ${dif === 0 ? 'igual' : 'distinto'}`;
+    signo.setAttribute('aria-label', dif === 0 ? 'balanza equilibrada' : 'balanza desequilibrada');
+
+    renderPasos();
+    renderControles();
+    renderNiveles();
+  }
+
+  function renderPasos() {
+    const lista = [];
+    if (ej.a > 0) lista.push(['quitar', 'Sacar cubos']);
+    if (ej.k > 1) lista.push(['repartir', 'Repartir']);
+    lista.push(['responder', 'Responder'], ['comprobar', 'Comprobar']);
+    const idx = lista.findIndex(p => p[0] === est.fase);
+    document.getElementById('pasos').innerHTML = lista.map((p, i) => {
+      const clase = i < idx ? 'hecho' : i === idx ? 'actual' : '';
+      return `<li class="${clase}">${i < idx ? '✔ ' : (i + 1) + '. '}${p[1]}</li>`;
+    }).join('');
+  }
+
+  function renderControles() {
+    const c = document.getElementById('controles');
+    if (est.fase === 'quitar') {
+      c.innerHTML = '';
+    } else if (est.fase === 'repartir') {
+      c.innerHTML = `<button class="btn btn-azul btn-grande" id="btnRepartir">✋ Repartir en ${ej.k} grupos</button>`;
+    } else if (est.fase === 'responder') {
+      const teclas = Array.from({ length: 13 }, (_, n) =>
+        `<button class="tecla ${est.valor === n ? 'sel' : ''}" data-num="${n}">${n}</button>`).join('');
+      c.innerHTML = `
+        <div class="respuesta">
+          <span class="vx">x</span> =
+          <span class="visor ${est.valor === null ? 'vacio' : ''}" aria-live="polite">${est.valor === null ? '?' : est.valor}</span>
+        </div>
+        <div class="teclado" role="group" aria-label="Elegí un número">${teclas}</div>
+        <div class="acciones">
+          <button class="btn btn-sec" id="btnBorrar">Borrar</button>
+          <button class="btn btn-principal" id="btnComprobar" ${est.valor === null ? 'disabled' : ''}>Comprobar ✔</button>
+        </div>`;
+    } else if (est.fase === 'comprobar') {
+      const b = ej.k * ej.x + ej.a;
+      const izqNum = ej.k === 1 ? `${ej.x}` : `${ej.k} · ${ej.x}`;
+      let izq = izqNum;
+      if (ej.a > 0) izq = ej.aPrimero ? `${ej.a} + ${izqNum}` : `${izqNum} + ${ej.a}`;
+      c.innerHTML = `
+        <div class="comprobacion">
+          Cambio la <span class="vx">x</span> por <b>${ej.x}</b>:
+          <div class="l">${izq} = ${b}</div>
+          <div class="l">${b} = ${b} ✅</div>
+          ¡Los dos lados son iguales!
+        </div>
+        <button class="btn btn-principal btn-grande" id="btnSiguiente">Siguiente ejercicio ➜</button>`;
+    }
+  }
+
+  function renderNiveles() {
+    document.getElementById('niveles').innerHTML = NIVELES.map(n => {
+      const bloqueado = n.id > progreso.desbloqueado;
+      const ac = Math.min(progreso.aciertos[n.id] || 0, POR_NIVEL);
+      const estrellas = '⭐'.repeat(ac) + '☆'.repeat(POR_NIVEL - ac);
+      return `<button class="nivel ${n.id === progreso.nivelActual ? 'sel' : ''}" data-nivel="${n.id}" ${bloqueado ? 'disabled' : ''}
+        aria-label="${n.nombre}, ${n.desc}${bloqueado ? ', bloqueado' : ''}">
+        <b>${bloqueado ? '🔒 ' : ''}${n.nombre}</b>
+        <span class="d">${n.desc}</span>
+        <div class="est">${estrellas}</div>
+      </button>`;
+    }).join('');
+  }
+
+  /* ================= ACCIONES ================= */
+  function tocarCubo(lado) {
+    if (est.fase !== 'quitar') return;
+    const otro = lado === 'izq' ? 'derecho' : 'izquierdo';
+    if (est[lado].cubos <= 0) return;
+
+    if (est.pendiente === null) {
+      est[lado].cubos--;
+      est.pendiente = lado;
+      mensaje('alerta', `¡La balanza se inclinó! Ahora sacá <b>1 cubo del lado ${otro}</b> para equilibrarla.`);
+    } else if (est.pendiente === lado) {
+      mensaje('alerta', `Ya sacaste de este lado. Ahora sacá <b>1 cubo del lado ${otro}</b>.`);
+      return;
+    } else {
+      est[lado].cubos--;
+      est.pendiente = null;
+      if (est.izq.cubos === 0) {
+        est.fase = ej.k > 1 ? 'repartir' : 'responder';
+        mensaje('ok', '¡Equilibrada otra vez! Ya no quedan cubos junto a la caja.');
+        setTimeout(() => { mensajeFase(); }, 1600);
+      } else {
+        mensaje('ok', `¡Equilibrada otra vez! Seguí sacando. Quedan <b>${est.izq.cubos}</b> cubo${est.izq.cubos > 1 ? 's' : ''} junto a la caja.`);
+      }
+    }
+    render();
+  }
+
+  function repartir() {
+    est.agrupado = true;
+    est.fase = 'responder';
+    mensajeFase();
+    render();
+  }
+
+  function comprobar() {
+    if (est.valor === null) {
+      mensaje('alerta', 'Primero elegí un número.');
+      return;
+    }
+    if (est.valor === ej.x) {
+      est.fase = 'comprobar';
+      const n = progreso.nivelActual;
+      const antes = progreso.aciertos[n] || 0;
+      progreso.aciertos[n] = antes + 1;
+      mensaje('ok', `¡Muy bien! <span class="vx">x</span> = <b>${ej.x}</b>. Ahora comprobamos.`);
+      let completo = false;
+      if (antes + 1 === POR_NIVEL) {
+        completo = true;
+        if (n < NIVELES.length && progreso.desbloqueado <= n) progreso.desbloqueado = n + 1;
+      }
+      guardar();
+      render();
+      if (completo) setTimeout(() => modalNivel(n), 900);
+    } else {
+      est.errores++;
+      if (est.errores >= 2) {
+        est.pista = true;
+        mensaje('error', ej.k === 1
+          ? 'Todavía no. Te numeré los cubos del lado derecho: <b>contalos</b> y elegí el último número.'
+          : 'Todavía no. Te numeré los cubos del <b>primer grupo</b>: contalos.');
+      } else {
+        mensaje('error', ej.k === 1
+          ? 'Todavía no. Mirá el lado derecho y <b>contá los cubos</b> de a uno.'
+          : 'Todavía no. Mirá <b>un solo grupo</b> y contá sus cubos.');
+      }
+      est.valor = null;
+      render();
+    }
+  }
+
+  /* ================= MODAL ================= */
+  let focoPrevio = null;
+  function abrirModal(ico, titulo, texto, botones) {
+    focoPrevio = document.activeElement;
+    document.getElementById('modalIco').textContent = ico;
+    document.getElementById('modalTitulo').textContent = titulo;
+    document.getElementById('modalTxt').textContent = texto;
+    const acc = document.getElementById('modalAcciones');
+    acc.innerHTML = '';
+    botones.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = `btn ${b.clase}`;
+      btn.textContent = b.texto;
+      btn.addEventListener('click', () => { cerrarModal(); b.accion && b.accion(); });
+      acc.appendChild(btn);
+    });
+    document.getElementById('modal').classList.add('abierto');
+    acc.querySelector('button').focus();
+  }
+  function cerrarModal() {
+    document.getElementById('modal').classList.remove('abierto');
+    if (focoPrevio) focoPrevio.focus();
+  }
+
+  function modalNivel(n) {
+    if (n < NIVELES.length) {
+      abrirModal('🏆', `¡Completaste el ${NIVELES[n - 1].nombre}!`, 'Ganaste 3 estrellas. Ya podés pasar al nivel siguiente.', [
+        { texto: `Ir al ${NIVELES[n].nombre} ➜`, clase: 'btn-principal', accion: () => cambiarNivel(n + 1) },
+        { texto: 'Seguir practicando este nivel', clase: 'btn-sec' }
+      ]);
+    } else {
+      abrirModal('🌟', '¡Completaste todos los niveles!', 'Ya sabés resolver ecuaciones con la balanza. ¡Excelente trabajo!', [
+        { texto: 'Seguir practicando', clase: 'btn-principal' }
+      ]);
+    }
+  }
+
+  function cambiarNivel(n) {
+    if (n > progreso.desbloqueado) {
+      mensaje('alerta', 'Este nivel todavía está bloqueado. Completá el anterior primero.');
+      return;
+    }
+    progreso.nivelActual = n;
+    guardar();
+    nuevoEjercicio();
+  }
+
+  /* ================= NAVEGACIÓN ================= */
+  function mostrarVista(nombre) {
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.vista === nombre)));
+    document.querySelectorAll('.vista').forEach(v => v.classList.toggle('activa', v.id === `vista-${nombre}`));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ================= BALANZAS DE LA INTRODUCCIÓN ================= */
+  function balanzaMini(izq, der, ang = 0) {
+    const item = t => t === 'x' ? '<span class="caja">x</span>' : '<span class="cubo">1</span>';
+    return `<div class="balanza mini" aria-hidden="true">
+      <div class="platos">
+        <div class="lado" style="transform:translateY(${ang * 1.2}px)"><div class="items">${izq.map(item).join('')}</div><div class="plato"></div></div>
+        <div class="signo ${ang === 0 ? 'igual' : 'distinto'}">${ang === 0 ? '=' : '≠'}</div>
+        <div class="lado" style="transform:translateY(${-ang * 1.2}px)"><div class="items">${der.map(item).join('')}</div><div class="plato"></div></div>
+      </div>
+      <div class="viga" style="transform:rotate(${-ang}deg)"></div><div class="poste"></div><div class="base"></div>
+    </div>`;
+  }
+
+  /* ================= EXPLICACIÓN PASO A PASO ================= */
+  const clave = (sim, palabra, def) =>
+    `<div class="clave"><div class="sim">${sim}</div><div><span class="pal">Palabra clave</span><b>${palabra}</b>${def}</div></div>`;
+  const X = '<span class="vx">x</span>';
+  const N = n => `<span class="vn">${n}</span>`;
+
+  const DIAPOS = [
+    {
+      titulo: '1. El signo igual',
+      html: () => `
+        ${clave('=', 'IGUAL', 'Quiere decir que <b>las dos partes valen lo mismo</b>.')}
+        <div class="diapo-texto">
+          <p>A la izquierda hay 3 cubos.</p>
+          <p>A la derecha hay 3 cubos.</p>
+          <p>Valen lo mismo: entonces pongo <b>=</b></p>
+        </div>
+        <div class="visual">${balanzaMini(['c','c','c'], ['c','c','c'])}<p class="pie">${N(3)} = ${N(3)}</p></div>`,
+      leer: 'El signo igual. Quiere decir que las dos partes valen lo mismo. A la izquierda hay 3 cubos. A la derecha hay 3 cubos. Valen lo mismo, entonces pongo igual.'
+    },
+    {
+      titulo: '2. La balanza',
+      html: () => `
+        ${clave('⚖️', 'EQUILIBRIO', 'La balanza queda <b>derecha</b> cuando los dos lados pesan lo mismo.')}
+        <div class="diapo-texto">
+          <p>Cada <b>cubo azul vale 1</b>.</p>
+          <p>Si los lados pesan igual, la balanza queda derecha: <b>=</b></p>
+          <p>Si un lado pesa más, la balanza se inclina: <b>≠</b> (no es igual).</p>
+        </div>
+        <div class="visual dos">
+          <div>${balanzaMini(['c','c'], ['c','c'])}<p class="pie" style="color:var(--ok)">Derecha ✔</p></div>
+          <div class="flecha"><span class="h">y</span><span class="v">y</span></div>
+          <div>${balanzaMini(['c','c','c','c'], ['c','c'], 10)}<p class="pie" style="color:var(--err)">Inclinada ✘</p></div>
+        </div>`,
+      leer: 'La balanza. Cada cubo azul vale 1. Si los lados pesan igual, la balanza queda derecha. Si un lado pesa más, la balanza se inclina y no es igual.'
+    },
+    {
+      titulo: '3. La incógnita',
+      html: () => `
+        ${clave(X, 'INCÓGNITA', 'Es un <b>número que no conocemos</b>. Lo escribimos con la letra x.')}
+        <div class="diapo-texto">
+          <p>Imaginá una <b>caja cerrada</b> con un número adentro.</p>
+          <p>No vemos el número. Por eso le decimos ${X}.</p>
+        </div>
+        <div class="visual"><div class="incog"><span class="caja">x</span> = <span class="preg">?</span></div></div>`,
+      leer: 'La incógnita. Es un número que no conocemos. Lo escribimos con la letra x. Imaginá una caja cerrada con un número adentro. No vemos el número, por eso le decimos x.'
+    },
+    {
+      titulo: '4. ¿Qué es una ecuación?',
+      html: () => `
+        ${clave(`${X} + ${N(2)} = ${N(5)}`, 'ECUACIÓN', 'Es una <b>igualdad</b> que tiene una <b>incógnita</b>.')}
+        <div class="diapo-texto">
+          <p>A la izquierda: una caja ${X} y 2 cubos.</p>
+          <p>A la derecha: 5 cubos.</p>
+          <p>La balanza está derecha: los dos lados pesan igual.</p>
+        </div>
+        <div class="visual">${balanzaMini(['x','c','c'], ['c','c','c','c','c'])}<p class="pie">${X} + ${N(2)} = ${N(5)}</p></div>`,
+      leer: 'Qué es una ecuación. Es una igualdad que tiene una incógnita. Por ejemplo x + 2 = 5. A la izquierda hay una caja x y 2 cubos. A la derecha hay 5 cubos. La balanza está derecha.'
+    },
+    {
+      titulo: '5. Resolver una ecuación',
+      html: () => `
+        ${clave('🔍', 'RESOLVER', 'Es <b>encontrar el número</b> que está escondido en la x.')}
+        <div class="diapo-texto">
+          <p>Para encontrarlo, dejo la caja <b>sola</b>.</p>
+          <p><b>Regla de oro:</b> lo que saco de un lado, lo saco del otro lado.</p>
+          <p>Así la balanza sigue derecha.</p>
+        </div>
+        <div class="visual dos">
+          <div>${balanzaMini(['x','c','c'], ['c','c','c','c','c'])}<p class="pie">${X} + ${N(2)} = ${N(5)}</p></div>
+          <div class="flecha"><span class="h">Saco 2 de cada lado ➜</span><span class="v">⬇ Saco 2 de cada lado</span></div>
+          <div>${balanzaMini(['x'], ['c','c','c'])}<p class="pie">${X} = ${N(3)}</p></div>
+        </div>`,
+      leer: 'Resolver una ecuación. Es encontrar el número que está escondido en la x. Para encontrarlo, dejo la caja sola. Regla de oro: lo que saco de un lado, lo saco del otro lado. Saco 2 cubos de cada lado.'
+    },
+    {
+      titulo: '6. ¡Encontré la x!',
+      html: () => `
+        ${clave(`${X} = ${N(3)}`, 'SOLUCIÓN', 'Es el <b>número</b> que vale la x.')}
+        <div class="diapo-texto">
+          <p>La caja quedó <b>sola</b> a la izquierda.</p>
+          <p>A la derecha hay <b>3 cubos</b>.</p>
+          <p>Entonces la caja vale 3: ${X} = ${N(3)}</p>
+        </div>
+        <div class="visual">${balanzaMini(['x'], ['c','c','c'])}<p class="pie">${X} = ${N(3)}</p></div>`,
+      leer: 'Encontré la x. La solución es el número que vale la x. La caja quedó sola a la izquierda. A la derecha hay 3 cubos. Entonces x = 3.'
+    },
+    {
+      titulo: '7. Comprobar',
+      html: () => `
+        ${clave('✅', 'COMPROBAR', 'Es <b>revisar</b> si la respuesta está bien.')}
+        <div class="diapo-texto">
+          <p>Cambio la ${X} por el número que encontré.</p>
+          <p>Si los dos lados dan igual, ¡está bien!</p>
+        </div>
+        <div class="visual compr-pasos">
+          <div>${X} + ${N(2)} = ${N(5)}</div>
+          <div>${N(3)} + ${N(2)} = ${N(5)}</div>
+          <div>${N(5)} = ${N(5)} ✅</div>
+        </div>`,
+      leer: 'Comprobar. Es revisar si la respuesta está bien. Cambio la x por el número que encontré: 3 + 2 = 5. 5 = 5. Los dos lados dan igual, está bien.'
+    },
+    {
+      titulo: '8. Resumen: los 3 pasos',
+      html: () => `
+        <p style="font-size:1.15rem;margin:4px 0 10px">Para resolver una ecuación:</p>
+        <ol class="resumen">
+          <li>Saco lo mismo de los dos lados.</li>
+          <li>Dejo la caja ${X} sola y miro el otro lado.</li>
+          <li>Compruebo cambiando la ${X} por el número.</li>
+        </ol>
+        <button class="btn btn-principal btn-grande" id="irPracticar">¡Vamos a practicar! ➜</button>`,
+      leer: 'Resumen. Para resolver una ecuación: uno, saco lo mismo de los dos lados. Dos, dejo la caja x sola y miro el otro lado. Tres, compruebo cambiando la x por el número.'
+    }
+  ];
+
+  let diapo = 0;
+  let diapoMax = 0;
+  function renderDiapo() {
+    const d = DIAPOS[diapo];
+    diapoMax = Math.max(diapoMax, diapo);
+    document.getElementById('diapoContenido').innerHTML = `<h2>${d.titulo}</h2>${d.html()}`;
+    document.getElementById('diapoNum').textContent = `Paso ${diapo + 1} de ${DIAPOS.length}`;
+    document.getElementById('diapoPuntos').innerHTML = DIAPOS.map((_, i) =>
+      `<span class="${i === diapo ? 'on' : i <= diapoMax ? 'visto' : ''}"></span>`).join('');
+    document.getElementById('diapoAnt').disabled = diapo === 0;
+    const sig = document.getElementById('diapoSig');
+    sig.style.display = diapo === DIAPOS.length - 1 ? 'none' : '';
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+  function moverDiapo(paso) {
+    const n = diapo + paso;
+    if (n < 0 || n >= DIAPOS.length) return;
+    diapo = n;
+    renderDiapo();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ================= CONTRASEÑA ================= */
+  const CONTRASENA = '7913';
+  let pinActual = '';
+  let bloqueado = true;
+  function renderPin(estado) {
+    const pin = document.getElementById('pin');
+    pin.className = `pin ${estado || ''}`;
+    pin.querySelectorAll('span').forEach((s, i) => {
+      s.textContent = i < pinActual.length ? '●' : '';
+      s.classList.toggle('lleno', i < pinActual.length);
+    });
+  }
+  function teclaPin(d) {
+    if (!bloqueado || pinActual.length >= 4 || !/^[0-9]$/.test(d)) return;
+    pinActual += d;
+    const msg = document.getElementById('pinMsg');
+    msg.textContent = '';
+    msg.className = 'pin-msg';
+    renderPin();
+    if (pinActual.length === 4) {
+      if (pinActual === CONTRASENA) {
+        renderPin('bien');
+        msg.textContent = '¡Correcto! Bienvenido/a 😊';
+        msg.className = 'pin-msg ok';
+        document.getElementById('candado').textContent = '🔓';
+        setTimeout(desbloquear, 800);
+      } else {
+        renderPin('mal');
+        msg.textContent = 'Esa no es la contraseña. Probá otra vez.';
+        msg.className = 'pin-msg error';
+        setTimeout(() => { pinActual = ''; renderPin(); }, 700);
+      }
+    }
+  }
+  function borrarPin() {
+    if (!bloqueado) return;
+    pinActual = pinActual.slice(0, -1);
+    renderPin();
+  }
+  function desbloquear() {
+    bloqueado = false;
+    document.getElementById('acceso').classList.add('oculto');
+    document.querySelectorAll('header, main, footer').forEach(el => el.removeAttribute('inert'));
+    document.getElementById('diapoSig').focus();
+  }
+
+  /* ================= EVENTOS ================= */
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.pin !== undefined) teclaPin(t.dataset.pin);
+    else if (t.id === 'pinBorrar') borrarPin();
+    else if (t.id === 'diapoAnt') moverDiapo(-1);
+    else if (t.id === 'diapoSig') moverDiapo(1);
+    else if (t.id === 'diapoAudio') hablar(DIAPOS[diapo].leer);
+    else if (t.dataset.vista) mostrarVista(t.dataset.vista);
+    else if (t.dataset.leer) hablar(t.dataset.leer);
+    else if (t.id === 'irPracticar') mostrarVista('practico');
+    else if (t.id === 'msgAudio') hablar(msgActual);
+    else if (t.dataset.lado && t.classList.contains('cubo')) {
+      if (t.classList.contains('tocable')) tocarCubo(t.dataset.lado);
+    }
+    else if (t.id === 'btnRepartir') repartir();
+    else if (t.dataset.num !== undefined) {
+      const n = parseInt(t.dataset.num, 10);
+      if (Number.isInteger(n) && n >= 0 && n <= 12) { est.valor = n; renderControles(); }
+    }
+    else if (t.id === 'btnBorrar') { est.valor = null; renderControles(); }
+    else if (t.id === 'btnComprobar') comprobar();
+    else if (t.id === 'btnSiguiente') nuevoEjercicio();
+    else if (t.dataset.nivel) cambiarNivel(parseInt(t.dataset.nivel, 10));
+    else if (t.id === 'btnReiniciar') {
+      abrirModal('🗑️', '¿Borrar el progreso?', 'Se borran todas las estrellas y los niveles vuelven a bloquearse.', [
+        { texto: 'Sí, borrar', clase: 'btn-sec', accion: () => { progreso = progresoInicial(); guardar(); nuevoEjercicio(); } },
+        { texto: 'No, volver', clase: 'btn-principal' }
+      ]);
+    }
+  });
+
+  // Toque en una caja: aviso amable
+  document.getElementById('itemsIzq').addEventListener('click', e => {
+    if (e.target.classList.contains('caja') && est.fase === 'quitar') {
+      mensaje('info', 'La caja <b>no se saca</b>: adentro está el número que buscamos. Sacá los <b>cubos azules</b>.');
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (bloqueado) {
+      if (/^[0-9]$/.test(e.key)) teclaPin(e.key);
+      else if (e.key === 'Backspace') borrarPin();
+      return;
+    }
+    if (e.key === 'Escape' && document.getElementById('modal').classList.contains('abierto')) cerrarModal();
+    if (est && est.fase === 'responder' && /^[0-9]$/.test(e.key) && !e.target.closest('.modal')) {
+      est.valor = parseInt(e.key, 10);
+      renderControles();
+    }
+    if (est && est.fase === 'responder' && e.key === 'Enter' && est.valor !== null) comprobar();
+  });
+
+  /* ================= INICIO ================= */
+  renderDiapo();
+  renderPin();
+
+  if (progreso.nivelActual > progreso.desbloqueado) progreso.nivelActual = 1;
+  nuevoEjercicio();
+})();
+</script>
+</body>
+</html>
